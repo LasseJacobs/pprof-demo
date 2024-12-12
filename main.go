@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/pkg/profile"
 
 	"github.com/polarsignals/pprof-example-app-go/fib"
+	"github.com/polarsignals/pprof-example-app-go/handlers"
 )
 
 var (
@@ -51,6 +53,10 @@ func main() {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	mux.HandleFunc("/api/fib", handlers.Fib)
+	mux.HandleFunc("/api/mem", handlers.Mem)
+
 	go func() { log.Fatal(http.ListenAndServe(bind, mux)) }()
 
 	switch mode {
@@ -86,13 +92,12 @@ func main() {
 func busyCPU() {
 	i := uint(1000000)
 	for {
-		log.Println("fibonacci number", i, fib.Fibonacci(i))
+		log.Println("fibonacci number", i, short(fib.Fibonacci(i).String()))
 		i++
 	}
 }
 
-// Allocate 1mb of memory every second, and don't free it.
-// Don't do this at home.
+// Allocate 1mb of memory every second
 func allocMem() {
 	buf := []byte{}
 	mb := 1024 * 1024
@@ -101,5 +106,18 @@ func allocMem() {
 		buf = append(buf, make([]byte, mb)...)
 		log.Println("total allocated memory", len(buf))
 		time.Sleep(time.Second)
+
+		// and randomly free it
+		if rand.Intn(100) <= 2 {
+			buf = []byte{}
+		}
 	}
+}
+
+func short(s string) string {
+	if len(s) <= 10 {
+		return s
+	}
+	bString := []byte(s)
+	return string(bString[:2]) + "..." + string(bString[len(bString)-3:])
 }
